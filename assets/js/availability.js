@@ -56,8 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
       base.startISO = start.toISOString();
       base.endISO = end.toISOString();
       base.dayOfWeek = start.getDay();
-      base.startMin = minutesSinceMidnight(start);
-      base.endMin = minutesSinceMidnight(end);
+      base.startMin = minutesFromDayStart(start, start);
+      base.endMin = minutesFromDayStart(end, start);
       base.recurrenceStartISO = startOfDay(start).toISOString();
       base.recurrenceEndISO = null;
     } else {
@@ -83,8 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const instStart = new Date(selected.instanceStartISO);
       const instEnd = new Date(selected.instanceEndISO);
       slot.dayOfWeek = instStart.getDay();
-      slot.startMin = minutesSinceMidnight(instStart);
-      slot.endMin = minutesSinceMidnight(instEnd);
+      slot.startMin = minutesFromDayStart(instStart, instStart);
+      slot.endMin = minutesFromDayStart(instEnd, instStart);
       slot.recurrenceStartISO = startOfDay(instStart).toISOString();
       slot.recurrenceEndISO = null;
     } else if (!slotRecurring.checked && slot.recurring) {
@@ -112,8 +112,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const currentStart = makeDateAt(day, slot.startMin);
       const currentEnd = makeDateAt(day, slot.endMin);
       const { nextStart, nextEnd } = updater(currentStart, currentEnd);
-      slot.startMin = clampToWindow(snapMinutes(minutesSinceMidnight(nextStart)));
-      slot.endMin = clampToWindow(snapMinutes(minutesSinceMidnight(nextEnd)));
+      slot.startMin = clampToWindow(snapMinutes(minutesFromDayStart(nextStart, day)));
+      slot.endMin = clampToWindow(snapMinutes(minutesFromDayStart(nextEnd, day)));
       if (slot.endMin <= slot.startMin) slot.endMin = slot.startMin + STEP_MIN;
       slot.endMin = Math.min(slot.endMin, END_MIN);
       slot.dayOfWeek = day.getDay();
@@ -144,8 +144,9 @@ document.addEventListener("DOMContentLoaded", () => {
       syncControlsFromSelected();
 
       const startY = e.clientY;
-      const startStartMin = minutesSinceMidnight(new Date(slotInstance.instanceStartISO));
-      const startEndMin = minutesSinceMidnight(new Date(slotInstance.instanceEndISO));
+      const instanceStart = new Date(slotInstance.instanceStartISO);
+      const startStartMin = minutesFromDayStart(instanceStart, instanceStart);
+      const startEndMin = minutesFromDayStart(new Date(slotInstance.instanceEndISO), instanceStart);
       const duration = startEndMin - startStartMin;
       const col = e.currentTarget.parentElement;
       const pxToMin = rangeMin / col.getBoundingClientRect().height;
@@ -168,10 +169,10 @@ document.addEventListener("DOMContentLoaded", () => {
           const nextS = new Date(curS.getTime() + delta * 60000);
           const nextE = new Date(curE.getTime() + delta * 60000);
           const day = startOfDay(curS);
-          let s = makeDateAt(day, clampToWindow(minutesSinceMidnight(nextS)));
-          let e = makeDateAt(day, clampToWindow(minutesSinceMidnight(nextE)));
-          if (e <= s) e = makeDateAt(day, minutesSinceMidnight(s) + STEP_MIN);
-          if (minutesSinceMidnight(e) > END_MIN) e = makeDateAt(day, END_MIN);
+          let s = makeDateAt(day, clampToWindow(minutesFromDayStart(nextS, day)));
+          let e = makeDateAt(day, clampToWindow(minutesFromDayStart(nextE, day)));
+          if (e <= s) e = makeDateAt(day, minutesFromDayStart(s, day) + STEP_MIN);
+          if (minutesFromDayStart(e, day) > END_MIN) e = makeDateAt(day, END_MIN);
           return { nextStart: s, nextEnd: e };
         });
         document.removeEventListener("mousemove", onMove);
@@ -191,8 +192,9 @@ document.addEventListener("DOMContentLoaded", () => {
       syncControlsFromSelected();
 
       const startY = e.clientY;
-      const startEndMin = minutesSinceMidnight(new Date(slotInstance.instanceEndISO));
-      const startStartMin = minutesSinceMidnight(new Date(slotInstance.instanceStartISO));
+      const instanceStart = new Date(slotInstance.instanceStartISO);
+      const startStartMin = minutesFromDayStart(instanceStart, instanceStart);
+      const startEndMin = minutesFromDayStart(new Date(slotInstance.instanceEndISO), instanceStart);
       const col = e.currentTarget.parentElement.parentElement;
       const pxToMin = (END_MIN - START_MIN) / col.getBoundingClientRect().height;
 
@@ -207,8 +209,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const delta = snapMinutes((ev.clientY - startY) * pxToMin);
         moveOrResizeSlot(slotInstance.slotId, slotInstance.instanceStartISO, (curS, curE) => {
           const day = startOfDay(curS);
-          const sMin = minutesSinceMidnight(curS);
-          let eMin = clampToWindow(minutesSinceMidnight(curE) + delta);
+          const sMin = minutesFromDayStart(curS, day);
+          let eMin = clampToWindow(minutesFromDayStart(curE, day) + delta);
           if (eMin <= sMin) eMin = sMin + STEP_MIN;
           return {
             nextStart: makeDateAt(day, sMin),
@@ -245,8 +247,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const col = view.dayCols[dayIndex];
       if (!col) continue;
 
-      const top = view.minutesToTopPct(minutesSinceMidnight(start));
-      const height = view.minutesToTopPct(minutesSinceMidnight(end)) - top;
+      const top = view.minutesToTopPct(minutesFromDayStart(start, start));
+      const height = view.minutesToTopPct(minutesFromDayStart(end, start)) - top;
 
       const div = document.createElement("div");
       div.className = `slot ${inst.type || "possible"}`;

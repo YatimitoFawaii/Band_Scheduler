@@ -274,8 +274,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const day = startOfDay(curStart);
     const { nextStart, nextEnd } = updater(curStart, curEnd);
 
-    let startMin = clampToWindow(snapMinutes(minutesSinceMidnight(nextStart)));
-    let endMin = clampToWindow(snapMinutes(minutesSinceMidnight(nextEnd)));
+    let startMin = clampToWindow(snapMinutes(minutesFromDayStart(nextStart, day)));
+    let endMin = clampToWindow(snapMinutes(minutesFromDayStart(nextEnd, day)));
 
     if (endMin <= startMin) endMin = startMin + STEP_MIN;
     if (endMin > END_MIN) endMin = END_MIN;
@@ -298,8 +298,9 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedEventId = event.id;
 
       const startY = e.clientY;
-      const startStartMin = minutesSinceMidnight(new Date(event.startISO));
-      const startEndMin = minutesSinceMidnight(new Date(event.endISO));
+      const eventStart = new Date(event.startISO);
+      const startStartMin = minutesFromDayStart(eventStart, eventStart);
+      const startEndMin = minutesFromDayStart(new Date(event.endISO), eventStart);
       const duration = startEndMin - startStartMin;
       const col = e.currentTarget.parentElement;
       const pxToMin = rangeMin / col.getBoundingClientRect().height;
@@ -325,8 +326,9 @@ document.addEventListener("DOMContentLoaded", () => {
       function onUp(ev) {
         const delta = snapMinutes((ev.clientY - startY) * pxToMin);
         moveOrResizeEvent(event.id, (curS, curE) => {
-          const durationMin = minutesSinceMidnight(curE) - minutesSinceMidnight(curS);
-          let nextStartMin = minutesSinceMidnight(curS) + delta;
+          const day = startOfDay(curS);
+          const durationMin = minutesFromDayStart(curE, day) - minutesFromDayStart(curS, day);
+          let nextStartMin = minutesFromDayStart(curS, day) + delta;
           let nextEndMin = nextStartMin + durationMin;
 
           if (nextStartMin < START_MIN) {
@@ -338,7 +340,6 @@ document.addEventListener("DOMContentLoaded", () => {
             nextStartMin = nextEndMin - durationMin;
           }
 
-          const day = startOfDay(curS);
           return {
             nextStart: makeDateAt(day, nextStartMin),
             nextEnd: makeDateAt(day, nextEndMin)
@@ -364,8 +365,9 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedEventId = event.id;
 
       const startY = e.clientY;
-      const startEndMin = minutesSinceMidnight(new Date(event.endISO));
-      const startStartMin = minutesSinceMidnight(new Date(event.startISO));
+      const eventStart = new Date(event.startISO);
+      const startStartMin = minutesFromDayStart(eventStart, eventStart);
+      const startEndMin = minutesFromDayStart(new Date(event.endISO), eventStart);
       const col = e.currentTarget.parentElement.parentElement;
       const pxToMin = rangeMin / col.getBoundingClientRect().height;
 
@@ -379,10 +381,10 @@ document.addEventListener("DOMContentLoaded", () => {
       function onUp(ev) {
         const delta = snapMinutes((ev.clientY - startY) * pxToMin);
         moveOrResizeEvent(event.id, (curS, curE) => {
-          const sMin = minutesSinceMidnight(curS);
-          let eMin = clampToWindow(minutesSinceMidnight(curE) + delta);
-          if (eMin <= sMin) eMin = sMin + STEP_MIN;
           const day = startOfDay(curS);
+          const sMin = minutesFromDayStart(curS, day);
+          let eMin = clampToWindow(minutesFromDayStart(curE, day) + delta);
+          if (eMin <= sMin) eMin = sMin + STEP_MIN;
           return {
             nextStart: makeDateAt(day, sMin),
             nextEnd: makeDateAt(day, eMin)
@@ -533,8 +535,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const col = view.dayCols[dayIndex];
       if (!col) continue;
 
-      const top = view.minutesToTopPct(minutesSinceMidnight(start));
-      const bottom = view.minutesToTopPct(minutesSinceMidnight(end));
+      const top = view.minutesToTopPct(minutesFromDayStart(start, start));
+      const bottom = view.minutesToTopPct(minutesFromDayStart(end, start));
       const height = Math.max(2, bottom - top);
 
       let extra = "";

@@ -17,6 +17,22 @@
 ## Free Postgres options for `DATABASE_URL`
 - [Neon](https://neon.tech) (free tier)
 - [Supabase](https://supabase.com) (free tier Postgres)
+- [Render Postgres](https://render.com/docs/postgresql-creating-connecting) (free/paid options)
+
+### Important
+- `DATABASE_URL` must be a real Postgres connection string, not a filename or code reference.
+- Example format:
+  - `postgresql://USER:PASSWORD@HOST:5432/DBNAME`
+- If `/api/health` shows `"backend":"file"`, the service is not reading a valid `DATABASE_URL`.
+
+### Quick setup on Render
+1. In Render, create a **Postgres** service.
+2. Open the Postgres service and copy the **Internal Database URL**.
+3. Open your web service -> **Environment**.
+4. Set `DATABASE_URL` to that Internal Database URL.
+5. Redeploy, then verify:
+   - `https://<your-service>.onrender.com/api/health`
+   - Expected: `{"ok":true,"backend":"postgres"}`
 
 From your chosen provider, copy the Postgres connection string and add it in Render:
 1. Open your Render service.

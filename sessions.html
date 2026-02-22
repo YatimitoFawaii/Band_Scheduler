@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sessions</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/sessions.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Sessions</h1>
+      <div class="row" style="margin-bottom:10px;">
+        <div>
+          <label for="campaignSelect">Campaign for New Session Proposals</label>
+          <select id="campaignSelect"></select>
+        </div>
+        <div>
+          <label for="sessionLocationMode">Session Location Mode</label>
+          <select id="sessionLocationMode">
+            <option value="in_person">In Person</option>
+            <option value="roll20_online">Roll20 Online</option>
+            <option value="roll20_hybrid">Roll20 In Person (Hybrid)</option>
+          </select>
+        </div>
+        <div>
+          <label><input type="checkbox" id="sessionRecurring" /> Recurring weekly</label>
+          <select id="sessionRecurringCount" disabled>
+            <option value="2">2 weeks total</option>
+            <option value="3">3 weeks total</option>
+            <option value="4" selected>4 weeks total</option>
+            <option value="6">6 weeks total</option>
+            <option value="8">8 weeks total</option>
+            <option value="12">12 weeks total</option>
+          </select>
+        </div>
+        <div class="inline" style="align-items:flex-end;">
+          <button id="prevWeek" type="button" class="secondary">Previous Week</button>
+          <button id="nextWeek" type="button" class="secondary">Next Week</button>
+          <span id="weekLabel" class="badge"></span>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:10px;">
+        <div>
+          <label for="sessionAddress">Session Address</label>
+          <input id="sessionAddress" placeholder="Street, City, State (for in-person/hybrid)" />
+        </div>
+        <div>
+          <label for="sessionRoll20Url">Roll20 Link</label>
+          <input id="sessionRoll20Url" placeholder="https://app.roll20.net/..." />
+        </div>
+      </div>
+      <p class="muted">Campaign selection affects new proposals and common-slot suggestions. The calendar view shows all your sessions across campaigns.</p>
+      <div class="week-shell" id="weekShell"></div>
+      <h3>Next Common Session Slots</h3>
+      <div id="commonSlots" class="list"></div>
+      <div id="sessionActions" class="list"></div>
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+</body>
+</html>

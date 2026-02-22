@@ -10,12 +10,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const removePhotoBtn = document.getElementById("removePhotoBtn");
   const openPublicProfileBtn = document.getElementById("openPublicProfileBtn");
   const myBands = document.getElementById("myBands");
+  const notificationsHint = document.getElementById("notificationsHint");
+  const characterSheetForm = document.getElementById("characterSheetForm");
+  const sheetCampaign = document.getElementById("sheetCampaign");
+  const sheetMsg = document.getElementById("sheetMsg");
 
   let pendingPhotoDataUrl = null;
   let removePhoto = false;
 
   function setMsg(text) {
     msg.textContent = text || "";
+  }
+
+  function setSheetMsg(text) {
+    sheetMsg.textContent = text || "";
   }
 
   function getMeFromDB() {
@@ -27,6 +35,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const db = loadDB();
     const bands = getUserBands(user.id);
     const memberships = db.memberships.filter((m) => m.userId === user.id);
+    const pendingIncoming = getPendingLeadershipRequestsForOwner(user.id, db).length;
+    if (notificationsHint) {
+      notificationsHint.innerHTML =
+        pendingIncoming > 0
+          ? `You have ${pendingIncoming} pending leadership request${pendingIncoming === 1 ? "" : "s"} on the <a href="notifications.html">Notifications</a> page.`
+          : `Leadership requests appear on the <a href="notifications.html">Notifications</a> page.`;
+    }
     if (!bands.length) {
       myBands.innerHTML = `<div class="item">You are not in any bands yet.</div>`;
       return;
@@ -45,6 +60,71 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
       })
       .join("");
+  }
+
+  const sheetFieldMap = {
+    characterName: "sheetCharacterName",
+    playerName: "sheetPlayerName",
+    classAndLevel: "sheetClassLevel",
+    species: "sheetSpecies",
+    background: "sheetBackground",
+    alignment: "sheetAlignment",
+    proficiencyBonus: "sheetProficiencyBonus",
+    armorClass: "sheetArmorClass",
+    initiative: "sheetInitiative",
+    speed: "sheetSpeed",
+    strength: "sheetStrength",
+    dexterity: "sheetDexterity",
+    constitution: "sheetConstitution",
+    intelligence: "sheetIntelligence",
+    wisdom: "sheetWisdom",
+    charisma: "sheetCharisma",
+    hitPointMax: "sheetHitPointMax",
+    currentHitPoints: "sheetCurrentHitPoints",
+    temporaryHitPoints: "sheetTemporaryHitPoints",
+    hitDice: "sheetHitDice",
+    deathSaves: "sheetDeathSaves",
+    savingThrows: "sheetSavingThrows",
+    skills: "sheetSkills",
+    attacksAndSpellcasting: "sheetAttacksAndSpellcasting",
+    equipment: "sheetEquipment",
+    featuresAndTraits: "sheetFeaturesAndTraits",
+    spells: "sheetSpells",
+    alliesAndOrganizations: "sheetAlliesAndOrganizations",
+    backstory: "sheetBackstory",
+    treasure: "sheetTreasure",
+    notes: "sheetNotes"
+  };
+
+  function readSheetFormFields() {
+    const out = {};
+    Object.entries(sheetFieldMap).forEach(([key, id]) => {
+      out[key] = document.getElementById(id).value || "";
+    });
+    return out;
+  }
+
+  function writeSheetFormFields(fields) {
+    Object.entries(sheetFieldMap).forEach(([key, id]) => {
+      document.getElementById(id).value = fields[key] || "";
+    });
+  }
+
+  function populateSheetCampaigns() {
+    const campaigns = getUserCampaigns(user.id);
+    if (!campaigns.length) {
+      sheetCampaign.innerHTML = `<option value="">No campaigns joined</option>`;
+      sheetCampaign.disabled = true;
+      writeSheetFormFields(defaultCharacterSheet2024());
+      return;
+    }
+    sheetCampaign.disabled = false;
+    sheetCampaign.innerHTML = campaigns.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+    if (!campaigns.some((c) => c.id === sheetCampaign.value)) {
+      sheetCampaign.value = campaigns[0].id;
+    }
+    const fields = getCharacterSheet(user.id, sheetCampaign.value);
+    writeSheetFormFields(fields);
   }
 
   function updatePhotoPreview(currentPhoto) {
@@ -69,6 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("mobilePhone").value = me.mobilePhone || "";
     updatePhotoPreview(me.photoDataUrl);
     renderBands();
+    populateSheetCampaigns();
   }
 
   hydrateForm();
@@ -97,6 +178,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
   openPublicProfileBtn.addEventListener("click", () => {
     window.open(`user_profile.html?id=${encodeURIComponent(user.id)}`, "_blank", "noopener");
+  });
+
+  sheetCampaign.addEventListener("change", () => {
+    if (!sheetCampaign.value) return;
+    const fields = getCharacterSheet(user.id, sheetCampaign.value);
+    writeSheetFormFields(fields);
+    setSheetMsg("");
+  });
+
+  characterSheetForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!sheetCampaign.value) {
+      setSheetMsg("Join a campaign first.");
+      return;
+    }
+    const res = saveCharacterSheet(user.id, sheetCampaign.value, readSheetFormFields());
+    setSheetMsg(res.ok ? "Character sheet saved." : res.message || "Could not save character sheet.");
   });
 
   form.addEventListener("submit", async (e) => {
@@ -199,5 +297,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const navUserLabel = document.querySelector(".nav .nav-inner span:not(.spacer)");
     if (navUserLabel) navUserLabel.textContent = me.username;
     renderBands();
+    populateSheetCampaigns();
   });
 });

@@ -69,6 +69,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const isLeader = band.leaderId === user.id;
       const members = getBandMembers(band.id);
       const epk = normalizeBandEPK(band.epk, band.name);
+      const pendingLeaderRequest = db.leadershipRequests.find(
+        (r) =>
+          r.scopeType === "band" &&
+          r.scopeId === band.id &&
+          r.requesterUserId === user.id &&
+          r.status === "pending"
+      );
 
       const card = document.createElement("div");
       card.className = "item";
@@ -80,8 +87,15 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="list" id="members_${band.id}"></div>
         <p><strong>Join Code:</strong> <code>${band.joinCode}</code></p>
-        <div class="inline" style="margin:10px 0;">
+        <div class="inline" style="margin:10px 0;flex-wrap:wrap;">
           <button type="button" class="danger" data-quit-band="${band.id}">Quit This Band</button>
+          ${
+            isLeader
+              ? ""
+              : `<button type="button" class="secondary" data-request-leader="${band.id}" ${pendingLeaderRequest ? "disabled" : ""}>
+                   ${pendingLeaderRequest ? "Leader Request Pending" : "Request Band Leader"}
+                 </button>`
+          }
         </div>
         ${isLeader ? `
           <div class="row">
@@ -223,6 +237,14 @@ document.addEventListener("DOMContentLoaded", () => {
         quitBand(user.id, btn.dataset.quitBand);
         setMsg("You left the band.");
         render();
+      });
+    });
+
+    bandsList.querySelectorAll("[data-request-leader]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const res = requestLeadershipRole(user.id, "band", btn.dataset.requestLeader);
+        setMsg(res.ok ? "Band leader request sent." : res.message || "Could not send request.");
+        if (res.ok) render();
       });
     });
 

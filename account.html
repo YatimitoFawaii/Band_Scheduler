@@ -60,10 +60,159 @@
         <div>
           <label>Bands You Are In (toggle public visibility)</label>
           <div id="myBands" class="list"></div>
+          <p class="muted" style="margin-top:8px;">
+            <span id="notificationsHint">Leadership requests appear on the <a href="notifications.html">Notifications</a> page.</span>
+          </p>
         </div>
         <button type="submit">Save Account Changes</button>
       </form>
       <div id="msg" class="msg"></div>
+    </section>
+
+    <section class="card">
+      <h2>Character Sheet (D&D 2024)</h2>
+      <form id="characterSheetForm" class="list">
+        <div class="row">
+          <div>
+            <label for="sheetCampaign">Campaign</label>
+            <select id="sheetCampaign"></select>
+          </div>
+          <div>
+            <label for="sheetCharacterName">Character Name</label>
+            <input id="sheetCharacterName" />
+          </div>
+          <div>
+            <label for="sheetPlayerName">Player Name</label>
+            <input id="sheetPlayerName" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="sheetClassLevel">Class & Level</label>
+            <input id="sheetClassLevel" />
+          </div>
+          <div>
+            <label for="sheetSpecies">Species</label>
+            <input id="sheetSpecies" />
+          </div>
+          <div>
+            <label for="sheetBackground">Background</label>
+            <input id="sheetBackground" />
+          </div>
+          <div>
+            <label for="sheetAlignment">Alignment</label>
+            <input id="sheetAlignment" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="sheetProficiencyBonus">Proficiency Bonus</label>
+            <input id="sheetProficiencyBonus" />
+          </div>
+          <div>
+            <label for="sheetArmorClass">Armor Class</label>
+            <input id="sheetArmorClass" />
+          </div>
+          <div>
+            <label for="sheetInitiative">Initiative</label>
+            <input id="sheetInitiative" />
+          </div>
+          <div>
+            <label for="sheetSpeed">Speed</label>
+            <input id="sheetSpeed" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="sheetStrength">Strength</label>
+            <input id="sheetStrength" />
+          </div>
+          <div>
+            <label for="sheetDexterity">Dexterity</label>
+            <input id="sheetDexterity" />
+          </div>
+          <div>
+            <label for="sheetConstitution">Constitution</label>
+            <input id="sheetConstitution" />
+          </div>
+          <div>
+            <label for="sheetIntelligence">Intelligence</label>
+            <input id="sheetIntelligence" />
+          </div>
+          <div>
+            <label for="sheetWisdom">Wisdom</label>
+            <input id="sheetWisdom" />
+          </div>
+          <div>
+            <label for="sheetCharisma">Charisma</label>
+            <input id="sheetCharisma" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="sheetHitPointMax">HP Max</label>
+            <input id="sheetHitPointMax" />
+          </div>
+          <div>
+            <label for="sheetCurrentHitPoints">Current HP</label>
+            <input id="sheetCurrentHitPoints" />
+          </div>
+          <div>
+            <label for="sheetTemporaryHitPoints">Temporary HP</label>
+            <input id="sheetTemporaryHitPoints" />
+          </div>
+          <div>
+            <label for="sheetHitDice">Hit Dice</label>
+            <input id="sheetHitDice" />
+          </div>
+          <div>
+            <label for="sheetDeathSaves">Death Saves</label>
+            <input id="sheetDeathSaves" />
+          </div>
+        </div>
+        <div>
+          <label for="sheetSavingThrows">Saving Throws</label>
+          <textarea id="sheetSavingThrows"></textarea>
+        </div>
+        <div>
+          <label for="sheetSkills">Skills</label>
+          <textarea id="sheetSkills"></textarea>
+        </div>
+        <div>
+          <label for="sheetAttacksAndSpellcasting">Attacks & Spellcasting</label>
+          <textarea id="sheetAttacksAndSpellcasting"></textarea>
+        </div>
+        <div>
+          <label for="sheetEquipment">Equipment</label>
+          <textarea id="sheetEquipment"></textarea>
+        </div>
+        <div>
+          <label for="sheetFeaturesAndTraits">Features & Traits</label>
+          <textarea id="sheetFeaturesAndTraits"></textarea>
+        </div>
+        <div>
+          <label for="sheetSpells">Spells</label>
+          <textarea id="sheetSpells"></textarea>
+        </div>
+        <div>
+          <label for="sheetAlliesAndOrganizations">Allies & Organizations</label>
+          <textarea id="sheetAlliesAndOrganizations"></textarea>
+        </div>
+        <div>
+          <label for="sheetBackstory">Backstory</label>
+          <textarea id="sheetBackstory"></textarea>
+        </div>
+        <div>
+          <label for="sheetTreasure">Treasure</label>
+          <textarea id="sheetTreasure"></textarea>
+        </div>
+        <div>
+          <label for="sheetNotes">Notes</label>
+          <textarea id="sheetNotes"></textarea>
+        </div>
+        <button type="submit">Save Character Sheet</button>
+      </form>
+      <div id="sheetMsg" class="msg"></div>
     </section>
   </main>
 </body>

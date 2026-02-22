@@ -11,9 +11,14 @@ const DEFAULT_DB = {
   users: [],
   bands: [],
   memberships: [],
+  campaigns: [],
+  campaignMemberships: [],
   availabilities: [],
   events: [],
+  campaignSessions: [],
   rehearsalSpaces: [],
+  characterSheets: [],
+  leadershipRequests: [],
   helpRequests: []
 };
 

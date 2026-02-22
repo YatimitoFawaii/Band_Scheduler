@@ -1,8 +1,8 @@
 const STORAGE_KEY = "bandSchedulerDataV1";
 const SESSION_KEY = "bandSchedulerSessionV1";
 const DAY_MS = 24 * 60 * 60 * 1000;
-const START_MIN = 11 * 60;
-const END_MIN = 23 * 60;
+const START_MIN = 0;
+const END_MIN = 24 * 60;
 const STEP_MIN = 15;
 const REMOTE_DB_ENDPOINT = "/api/db";
 const REMOTE_DB_HEALTH_ENDPOINT = "/api/health";
@@ -109,10 +109,59 @@ function normalizeBandEPK(epk, bandName = "") {
   return out;
 }
 
+function defaultCharacterSheet2024() {
+  return {
+    characterName: "",
+    classAndLevel: "",
+    species: "",
+    background: "",
+    alignment: "",
+    playerName: "",
+    proficiencyBonus: "",
+    armorClass: "",
+    initiative: "",
+    speed: "",
+    hitPointMax: "",
+    currentHitPoints: "",
+    temporaryHitPoints: "",
+    hitDice: "",
+    deathSaves: "",
+    strength: "",
+    dexterity: "",
+    constitution: "",
+    intelligence: "",
+    wisdom: "",
+    charisma: "",
+    savingThrows: "",
+    skills: "",
+    attacksAndSpellcasting: "",
+    equipment: "",
+    featuresAndTraits: "",
+    spells: "",
+    alliesAndOrganizations: "",
+    backstory: "",
+    treasure: "",
+    notes: ""
+  };
+}
+
 function ensureDBShape(db) {
   let changed = false;
 
-  for (const key of ["users", "bands", "memberships", "availabilities", "events", "rehearsalSpaces", "helpRequests"]) {
+  for (const key of [
+    "users",
+    "bands",
+    "memberships",
+    "campaigns",
+    "campaignMemberships",
+    "availabilities",
+    "events",
+    "campaignSessions",
+    "rehearsalSpaces",
+    "characterSheets",
+    "leadershipRequests",
+    "helpRequests"
+  ]) {
     if (!Array.isArray(db[key])) {
       db[key] = [];
       changed = true;
@@ -168,6 +217,38 @@ function ensureDBShape(db) {
     }
   });
 
+  db.campaigns.forEach((campaign) => {
+    if (typeof campaign.regularSessionDurationMin !== "number") {
+      campaign.regularSessionDurationMin = 180;
+      changed = true;
+    }
+    if (typeof campaign.nextSessionDurationMin !== "number") {
+      campaign.nextSessionDurationMin = campaign.regularSessionDurationMin || 180;
+      changed = true;
+    }
+    if (typeof campaign.nextSessionOverrideEnabled !== "boolean") {
+      campaign.nextSessionOverrideEnabled = false;
+      changed = true;
+    }
+  });
+
+  db.campaignMemberships.forEach((m) => {
+    if (typeof m.role !== "string") {
+      m.role = "";
+      changed = true;
+    }
+  });
+
+  db.characterSheets.forEach((sheet) => {
+    const base = defaultCharacterSheet2024();
+    const fields = sheet.fields && typeof sheet.fields === "object" ? sheet.fields : {};
+    const merged = { ...base, ...fields };
+    if (JSON.stringify(fields) !== JSON.stringify(merged)) {
+      sheet.fields = merged;
+      changed = true;
+    }
+  });
+
   return changed;
 }
 
@@ -194,9 +275,14 @@ function loadDB() {
       users: [],
       bands: [],
       memberships: [],
+      campaigns: [],
+      campaignMemberships: [],
       availabilities: [],
       events: [],
+      campaignSessions: [],
       rehearsalSpaces: [],
+      characterSheets: [],
+      leadershipRequests: [],
       helpRequests: []
     };
     ensureDBShape(base);
@@ -320,8 +406,11 @@ function navItems() {
     ["availability.html", "Availability"],
     ["calendar.html", "Calendar"],
     ["bands.html", "Bands"],
+    ["campaigns.html", "Campaigns"],
+    ["sessions.html", "Sessions"],
     ["gigs.html", "Gigs"],
     ["rehearsal_spaces.html", "Rehearsal Spaces"],
+    ["notifications.html", "Notifications"],
     ["help.html", "Help"]
   ];
 }
@@ -374,6 +463,33 @@ function getBandMembers(bandId, db = loadDB()) {
 
 function getMembership(userId, bandId, db = loadDB()) {
   return db.memberships.find((m) => m.userId === userId && m.bandId === bandId) || null;
+}
+
+function getCampaignMembership(userId, campaignId, db = loadDB()) {
+  return db.campaignMemberships.find((m) => m.userId === userId && m.campaignId === campaignId) || null;
+}
+
+function getUserCampaigns(userId) {
+  const db = loadDB();
+  const campaignIds = db.campaignMemberships.filter((m) => m.userId === userId).map((m) => m.campaignId);
+  return db.campaigns.filter((c) => campaignIds.includes(c.id));
+}
+
+function userInCampaign(userId, campaignId, db = loadDB()) {
+  return !!db.campaignMemberships.find((m) => m.userId === userId && m.campaignId === campaignId);
+}
+
+function getCampaignMembers(campaignId, db = loadDB()) {
+  const memberships = db.campaignMemberships
+    .filter((m) => m.campaignId === campaignId)
+    .sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt));
+  return memberships
+    .map((m) => {
+      const user = db.users.find((u) => u.id === m.userId);
+      if (!user) return null;
+      return { ...user, joinedAt: m.joinedAt, role: m.role || "" };
+    })
+    .filter(Boolean);
 }
 
 function usersShareBand(userIdA, userIdB, db = loadDB()) {
@@ -482,6 +598,11 @@ function minutesSinceMidnight(date) {
   return date.getHours() * 60 + date.getMinutes();
 }
 
+function minutesFromDayStart(date, dayDate = date) {
+  const base = startOfDay(dayDate);
+  return Math.round((new Date(date).getTime() - base.getTime()) / 60000);
+}
+
 function clampToWindow(min) {
   return Math.min(END_MIN, Math.max(START_MIN, min));
 }
@@ -560,9 +681,31 @@ function getConfirmedBusyEvents(userId, rangeStart, rangeEnd) {
   return all.filter((e) => e.statusByUser?.[userId] === "confirmed");
 }
 
+function getCampaignSessionsForUserInRange(userId, rangeStart, rangeEnd) {
+  const db = loadDB();
+  return db.campaignSessions.filter((s) => {
+    if (s.removed) return false;
+    if (!userInCampaign(userId, s.campaignId, db)) return false;
+    if (!overlaps(s.startISO, s.endISO, rangeStart.toISOString(), rangeEnd.toISOString())) return false;
+    return true;
+  });
+}
+
+function getConfirmedBusyCampaignSessions(userId, rangeStart, rangeEnd) {
+  const all = getCampaignSessionsForUserInRange(userId, rangeStart, rangeEnd);
+  return all.filter((s) => s.statusByUser?.[userId] === "confirmed");
+}
+
 function getBandRegularDuration(band) {
   if (band.nextRehearsalOverrideEnabled) return band.nextRehearsalDurationMin || band.regularDurationMin || 120;
   return band.regularDurationMin || 120;
+}
+
+function getCampaignRegularDuration(campaign) {
+  if (campaign.nextSessionOverrideEnabled) {
+    return campaign.nextSessionDurationMin || campaign.regularSessionDurationMin || 180;
+  }
+  return campaign.regularSessionDurationMin || 180;
 }
 
 function consumeNextRehearsalOverrideIfNeeded(bandId) {
@@ -581,6 +724,26 @@ function consumeNextRehearsalOverrideIfNeeded(bandId) {
   }
   if (now > new Date(upcoming.endISO)) {
     band.nextRehearsalOverrideEnabled = false;
+    saveDB(db);
+  }
+}
+
+function consumeNextSessionOverrideIfNeeded(campaignId) {
+  const db = loadDB();
+  const campaign = db.campaigns.find((c) => c.id === campaignId);
+  if (!campaign || !campaign.nextSessionOverrideEnabled) return;
+  const now = new Date();
+  const futureSessions = db.campaignSessions
+    .filter((s) => !s.removed && s.campaignId === campaignId)
+    .sort((a, b) => new Date(a.startISO) - new Date(b.startISO));
+  const upcoming = futureSessions.find((s) => new Date(s.endISO) > now);
+  if (!upcoming) {
+    campaign.nextSessionOverrideEnabled = false;
+    saveDB(db);
+    return;
+  }
+  if (now > new Date(upcoming.endISO)) {
+    campaign.nextSessionOverrideEnabled = false;
     saveDB(db);
   }
 }
@@ -617,6 +780,59 @@ function computeNextCommonSlots(bandId, fromDate = new Date(), maxDays = 30) {
         overlaps(e.startISO, e.endISO, candStart.toISOString(), candEnd.toISOString())
       );
       if (busy) {
+        ok = false;
+        break;
+      }
+    }
+
+    if (ok) {
+      out.push({ startISO: candStart.toISOString(), endISO: candEnd.toISOString() });
+      if (out.length >= 8) break;
+      t = new Date(candEnd.getTime() - STEP_MIN * 60000);
+    }
+  }
+  return out;
+}
+
+function computeNextCampaignCommonSlots(campaignId, fromDate = new Date(), maxDays = 30) {
+  const db = loadDB();
+  const campaign = db.campaigns.find((c) => c.id === campaignId);
+  if (!campaign) return [];
+  const members = getCampaignMembers(campaignId, db);
+  if (!members.length) return [];
+  const duration = getCampaignRegularDuration(campaign);
+
+  const startScan = new Date(fromDate);
+  startScan.setSeconds(0, 0);
+  const endScan = dateAddDays(startScan, maxDays);
+  const out = [];
+
+  for (let t = new Date(startScan); t < endScan; t = new Date(t.getTime() + STEP_MIN * 60000)) {
+    const min = minutesSinceMidnight(t);
+    if (min < START_MIN || min + duration > END_MIN) continue;
+    const candStart = new Date(t);
+    const candEnd = new Date(t.getTime() + duration * 60000);
+
+    let ok = true;
+    for (const member of members) {
+      const memberAvail = getAvailabilitiesForUser(member.id, candStart, candEnd).filter(
+        (a) => new Date(a.instanceStartISO) <= candStart && new Date(a.instanceEndISO) >= candEnd
+      );
+      if (!memberAvail.length) {
+        ok = false;
+        break;
+      }
+      const busySessions = getConfirmedBusyCampaignSessions(member.id, candStart, candEnd).find((s) =>
+        overlaps(s.startISO, s.endISO, candStart.toISOString(), candEnd.toISOString())
+      );
+      if (busySessions) {
+        ok = false;
+        break;
+      }
+      const busyBandEvents = getConfirmedBusyEvents(member.id, candStart, candEnd).find((e) =>
+        overlaps(e.startISO, e.endISO, candStart.toISOString(), candEnd.toISOString())
+      );
+      if (busyBandEvents) {
         ok = false;
         break;
       }
@@ -777,7 +993,7 @@ function createWeekView(target, weekStart, options = {}) {
 
   const timeCol = document.createElement("div");
   timeCol.className = "time-col";
-  for (let h = START_MIN; h <= END_MIN; h += 60) {
+  for (let h = START_MIN; h < END_MIN; h += 60) {
     const lab = document.createElement("div");
     lab.className = "time-label";
     lab.textContent = formatTime(makeDateAt(weekStart, h));
@@ -847,6 +1063,34 @@ function createBand(name, leaderId) {
   });
 }
 
+function createCampaign(name, dmUserId) {
+  const db = loadDB();
+  const joinCode = Math.random().toString(36).slice(2, 10).toUpperCase();
+  return hashString(joinCode).then((joinCodeHash) => {
+    const campaign = {
+      id: uid("camp"),
+      name: name.trim(),
+      dmId: dmUserId,
+      joinCode,
+      joinCodeHash,
+      regularSessionDurationMin: 180,
+      nextSessionDurationMin: 180,
+      nextSessionOverrideEnabled: false,
+      createdAt: nowISO()
+    };
+    db.campaigns.push(campaign);
+    db.campaignMemberships.push({
+      id: uid("cm"),
+      campaignId: campaign.id,
+      userId: dmUserId,
+      role: "Dungeon Master",
+      joinedAt: nowISO()
+    });
+    saveDB(db);
+    return campaign;
+  });
+}
+
 async function joinBandByCode(userId, code) {
   const db = loadDB();
   const hash = await hashString((code || "").trim().toUpperCase());
@@ -865,6 +1109,23 @@ async function joinBandByCode(userId, code) {
   return { ok: true };
 }
 
+async function joinCampaignByCode(userId, code) {
+  const db = loadDB();
+  const hash = await hashString((code || "").trim().toUpperCase());
+  const campaign = db.campaigns.find((c) => c.joinCodeHash === hash);
+  if (!campaign) return { ok: false, message: "Invalid join code." };
+  if (userInCampaign(userId, campaign.id, db)) return { ok: false, message: "Already in campaign." };
+  db.campaignMemberships.push({
+    id: uid("cm"),
+    campaignId: campaign.id,
+    userId,
+    role: "",
+    joinedAt: nowISO()
+  });
+  saveDB(db);
+  return { ok: true };
+}
+
 function quitBand(userId, bandId) {
   const db = loadDB();
   db.memberships = db.memberships.filter((m) => !(m.bandId === bandId && m.userId === userId));
@@ -876,12 +1137,41 @@ function quitBand(userId, bandId) {
     if (next) {
       band.leaderId = next.userId;
       next.role = next.role || "Band Leader";
+      retargetPendingLeadershipRequests("band", bandId, next.userId, db);
     }
   }
   if (!db.memberships.find((m) => m.bandId === bandId)) {
     db.bands = db.bands.filter((b) => b.id !== bandId);
     db.events = db.events.filter((e) => e.bandId !== bandId);
     db.rehearsalSpaces = db.rehearsalSpaces.filter((s) => s.bandId !== bandId);
+    db.leadershipRequests = db.leadershipRequests.filter((r) => !(r.scopeType === "band" && r.scopeId === bandId));
+  }
+  saveDB(db);
+}
+
+function quitCampaign(userId, campaignId) {
+  const db = loadDB();
+  db.campaignMemberships = db.campaignMemberships.filter(
+    (m) => !(m.campaignId === campaignId && m.userId === userId)
+  );
+  const campaign = db.campaigns.find((c) => c.id === campaignId);
+  if (campaign && campaign.dmId === userId) {
+    const next = db.campaignMemberships
+      .filter((m) => m.campaignId === campaignId)
+      .sort((a, b) => new Date(a.joinedAt) - new Date(b.joinedAt))[0];
+    if (next) {
+      campaign.dmId = next.userId;
+      next.role = next.role || "Dungeon Master";
+      retargetPendingLeadershipRequests("campaign", campaignId, next.userId, db);
+    }
+  }
+  if (!db.campaignMemberships.find((m) => m.campaignId === campaignId)) {
+    db.campaigns = db.campaigns.filter((c) => c.id !== campaignId);
+    db.campaignSessions = db.campaignSessions.filter((s) => s.campaignId !== campaignId);
+    db.characterSheets = db.characterSheets.filter((s) => s.campaignId !== campaignId);
+    db.leadershipRequests = db.leadershipRequests.filter(
+      (r) => !(r.scopeType === "campaign" && r.scopeId === campaignId)
+    );
   }
   saveDB(db);
 }
@@ -892,6 +1182,18 @@ function removeMemberFromBand(actorUserId, targetUserId, bandId) {
   if (!band || band.leaderId !== actorUserId) return { ok: false };
   if (targetUserId === actorUserId) return { ok: false, message: "Use quit instead." };
   db.memberships = db.memberships.filter((m) => !(m.bandId === bandId && m.userId === targetUserId));
+  saveDB(db);
+  return { ok: true };
+}
+
+function removeMemberFromCampaign(actorUserId, targetUserId, campaignId) {
+  const db = loadDB();
+  const campaign = db.campaigns.find((c) => c.id === campaignId);
+  if (!campaign || campaign.dmId !== actorUserId) return { ok: false };
+  if (targetUserId === actorUserId) return { ok: false, message: "Use quit instead." };
+  db.campaignMemberships = db.campaignMemberships.filter(
+    (m) => !(m.campaignId === campaignId && m.userId === targetUserId)
+  );
   saveDB(db);
   return { ok: true };
 }
@@ -908,6 +1210,28 @@ function transferLeadership(actorUserId, targetUserId, bandId) {
   const newLeaderMembership = db.memberships.find((m) => m.bandId === bandId && m.userId === targetUserId);
   if (newLeaderMembership) newLeaderMembership.role = "Band Leader";
   band.leaderId = targetUserId;
+  retargetPendingLeadershipRequests("band", bandId, targetUserId, db);
+  saveDB(db);
+  return { ok: true };
+}
+
+function transferDungeonMaster(actorUserId, targetUserId, campaignId) {
+  const db = loadDB();
+  const campaign = db.campaigns.find((c) => c.id === campaignId);
+  if (!campaign || campaign.dmId !== actorUserId) return { ok: false };
+  if (!userInCampaign(targetUserId, campaignId, db)) return { ok: false };
+  const previousDMembership = db.campaignMemberships.find(
+    (m) => m.campaignId === campaignId && m.userId === actorUserId
+  );
+  if (previousDMembership && previousDMembership.role === "Dungeon Master") {
+    previousDMembership.role = "";
+  }
+  const newDMembership = db.campaignMemberships.find(
+    (m) => m.campaignId === campaignId && m.userId === targetUserId
+  );
+  if (newDMembership) newDMembership.role = "Dungeon Master";
+  campaign.dmId = targetUserId;
+  retargetPendingLeadershipRequests("campaign", campaignId, targetUserId, db);
   saveDB(db);
   return { ok: true };
 }
@@ -919,6 +1243,17 @@ function setBandDurations(actorUserId, bandId, regularDurationMin, nextDurationM
   band.regularDurationMin = regularDurationMin;
   band.nextRehearsalDurationMin = nextDurationMin;
   band.nextRehearsalOverrideEnabled = !!overrideEnabled;
+  saveDB(db);
+  return { ok: true };
+}
+
+function setCampaignDurations(actorUserId, campaignId, regularDurationMin, nextDurationMin, overrideEnabled) {
+  const db = loadDB();
+  const campaign = db.campaigns.find((c) => c.id === campaignId);
+  if (!campaign || campaign.dmId !== actorUserId) return { ok: false };
+  campaign.regularSessionDurationMin = regularDurationMin;
+  campaign.nextSessionDurationMin = nextDurationMin;
+  campaign.nextSessionOverrideEnabled = !!overrideEnabled;
   saveDB(db);
   return { ok: true };
 }
@@ -937,6 +1272,22 @@ function setMembershipRole(actorUserId, bandId, targetUserId, roleText) {
   return { ok: true };
 }
 
+function setCampaignMembershipRole(actorUserId, campaignId, targetUserId, roleText) {
+  const db = loadDB();
+  const campaign = db.campaigns.find((c) => c.id === campaignId);
+  if (!campaign) return { ok: false, message: "Campaign not found." };
+  const membership = db.campaignMemberships.find(
+    (m) => m.campaignId === campaignId && m.userId === targetUserId
+  );
+  if (!membership) return { ok: false, message: "Member not found." };
+  if (actorUserId !== targetUserId && campaign.dmId !== actorUserId) {
+    return { ok: false, message: "Only the dungeon master can edit other members." };
+  }
+  membership.role = String(roleText || "").trim().slice(0, 80);
+  saveDB(db);
+  return { ok: true };
+}
+
 function updateBandEPK(actorUserId, bandId, patch) {
   const db = loadDB();
   const band = db.bands.find((b) => b.id === bandId);
@@ -945,6 +1296,164 @@ function updateBandEPK(actorUserId, bandId, patch) {
   band.epk = normalizeBandEPK({ ...(band.epk || {}), ...(patch || {}) }, band.name);
   saveDB(db);
   return { ok: true, band };
+}
+
+function getCharacterSheet(userId, campaignId, db = loadDB()) {
+  const sheet = db.characterSheets.find((s) => s.userId === userId && s.campaignId === campaignId);
+  if (!sheet) return { ...defaultCharacterSheet2024() };
+  return { ...defaultCharacterSheet2024(), ...(sheet.fields || {}) };
+}
+
+function saveCharacterSheet(userId, campaignId, fields) {
+  const db = loadDB();
+  if (!userInCampaign(userId, campaignId, db)) return { ok: false, message: "Join the campaign first." };
+  const idx = db.characterSheets.findIndex((s) => s.userId === userId && s.campaignId === campaignId);
+  const entry = {
+    id: idx === -1 ? uid("sheet") : db.characterSheets[idx].id,
+    userId,
+    campaignId,
+    template: "dnd-2024",
+    fields: { ...defaultCharacterSheet2024(), ...(fields || {}) },
+    updatedAt: nowISO()
+  };
+  if (idx === -1) db.characterSheets.push(entry);
+  else db.characterSheets[idx] = entry;
+  saveDB(db);
+  return { ok: true };
+}
+
+function leadershipScopeCurrentLeader(scopeType, scopeId, db = loadDB()) {
+  if (scopeType === "band") {
+    const band = db.bands.find((b) => b.id === scopeId);
+    return band ? band.leaderId : null;
+  }
+  if (scopeType === "campaign") {
+    const campaign = db.campaigns.find((c) => c.id === scopeId);
+    return campaign ? campaign.dmId : null;
+  }
+  return null;
+}
+
+function retargetPendingLeadershipRequests(scopeType, scopeId, newLeaderUserId, db) {
+  db.leadershipRequests.forEach((r) => {
+    if (r.scopeType !== scopeType || r.scopeId !== scopeId || r.status !== "pending") return;
+    r.targetLeaderUserId = newLeaderUserId || null;
+    if (!newLeaderUserId) {
+      r.status = "rejected";
+      r.resolvedAt = nowISO();
+    }
+  });
+}
+
+function requestLeadershipRole(requesterUserId, scopeType, scopeId) {
+  const db = loadDB();
+  if (!["band", "campaign"].includes(scopeType)) return { ok: false, message: "Invalid scope." };
+
+  if (scopeType === "band" && !userInBand(requesterUserId, scopeId, db)) {
+    return { ok: false, message: "You must be in the band to request leadership." };
+  }
+  if (scopeType === "campaign" && !userInCampaign(requesterUserId, scopeId, db)) {
+    return { ok: false, message: "You must be in the campaign to request DM." };
+  }
+
+  const targetLeaderUserId = leadershipScopeCurrentLeader(scopeType, scopeId, db);
+  if (!targetLeaderUserId) return { ok: false, message: "Current owner not found." };
+  if (targetLeaderUserId === requesterUserId) {
+    return {
+      ok: false,
+      message: scopeType === "band" ? "You are already the band leader." : "You are already the dungeon master."
+    };
+  }
+
+  const existingPending = db.leadershipRequests.find(
+    (r) =>
+      r.scopeType === scopeType &&
+      r.scopeId === scopeId &&
+      r.requesterUserId === requesterUserId &&
+      r.status === "pending"
+  );
+  if (existingPending) return { ok: false, message: "You already have a pending request." };
+
+  const request = {
+    id: uid("leadreq"),
+    scopeType,
+    scopeId,
+    requesterUserId,
+    targetLeaderUserId,
+    status: "pending",
+    createdAt: nowISO(),
+    resolvedAt: null
+  };
+  db.leadershipRequests.push(request);
+  saveDB(db);
+  return { ok: true, request };
+}
+
+function resolveLeadershipRequest(requestId, actorUserId, decision) {
+  const db = loadDB();
+  const request = db.leadershipRequests.find((r) => r.id === requestId);
+  if (!request || request.status !== "pending") return { ok: false, message: "Request is not pending." };
+  const currentLeaderId = leadershipScopeCurrentLeader(request.scopeType, request.scopeId, db);
+  if (!currentLeaderId || currentLeaderId !== actorUserId) {
+    return { ok: false, message: "Only the current owner can resolve this request." };
+  }
+  if (!["approved", "rejected"].includes(decision)) return { ok: false, message: "Invalid decision." };
+
+  if (decision === "approved") {
+    if (request.scopeType === "band") {
+      const band = db.bands.find((b) => b.id === request.scopeId);
+      if (!band || band.leaderId !== actorUserId) {
+        return { ok: false, message: "Could not transfer band leadership." };
+      }
+      const previousLeaderMembership = db.memberships.find(
+        (m) => m.bandId === request.scopeId && m.userId === actorUserId
+      );
+      if (previousLeaderMembership && previousLeaderMembership.role === "Band Leader") {
+        previousLeaderMembership.role = "";
+      }
+      const nextLeaderMembership = db.memberships.find(
+        (m) => m.bandId === request.scopeId && m.userId === request.requesterUserId
+      );
+      if (!nextLeaderMembership) return { ok: false, message: "Could not transfer band leadership." };
+      nextLeaderMembership.role = "Band Leader";
+      band.leaderId = request.requesterUserId;
+      retargetPendingLeadershipRequests("band", request.scopeId, request.requesterUserId, db);
+    } else {
+      const campaign = db.campaigns.find((c) => c.id === request.scopeId);
+      if (!campaign || campaign.dmId !== actorUserId) {
+        return { ok: false, message: "Could not transfer dungeon master role." };
+      }
+      const previousDmMembership = db.campaignMemberships.find(
+        (m) => m.campaignId === request.scopeId && m.userId === actorUserId
+      );
+      if (previousDmMembership && previousDmMembership.role === "Dungeon Master") {
+        previousDmMembership.role = "";
+      }
+      const nextDmMembership = db.campaignMemberships.find(
+        (m) => m.campaignId === request.scopeId && m.userId === request.requesterUserId
+      );
+      if (!nextDmMembership) return { ok: false, message: "Could not transfer dungeon master role." };
+      nextDmMembership.role = "Dungeon Master";
+      campaign.dmId = request.requesterUserId;
+      retargetPendingLeadershipRequests("campaign", request.scopeId, request.requesterUserId, db);
+    }
+  }
+
+  request.status = decision;
+  request.resolvedAt = nowISO();
+  saveDB(db);
+  return { ok: true };
+}
+
+function getLeadershipRequestsForUser(userId, db = loadDB()) {
+  return db.leadershipRequests.filter((r) => r.requesterUserId === userId || r.targetLeaderUserId === userId);
+}
+
+function getPendingLeadershipRequestsForOwner(userId, db = loadDB()) {
+  return db.leadershipRequests.filter((r) => {
+    if (r.status !== "pending") return false;
+    return leadershipScopeCurrentLeader(r.scopeType, r.scopeId, db) === userId;
+  });
 }
 
 function setEventStatus(eventId, userId, status) {
@@ -1020,4 +1529,60 @@ function createEventForBand({ bandId, type, creatorId, startISO, endISO, title, 
   db.events.push(event);
   saveDB(db);
   return event;
+}
+
+function createSessionForCampaign({
+  campaignId,
+  creatorId,
+  startISO,
+  endISO,
+  title,
+  locationMode,
+  locationAddress,
+  roll20Url
+}) {
+  const db = loadDB();
+  const members = getCampaignMembers(campaignId, db);
+  const statusByUser = {};
+  members.forEach((m) => {
+    statusByUser[m.id] = "pending";
+  });
+  const session = {
+    id: uid("sess"),
+    campaignId,
+    creatorId,
+    startISO,
+    endISO,
+    title: title || "Proposed session",
+    locationMode: locationMode || "in_person",
+    locationAddress: locationAddress || null,
+    roll20Url: roll20Url || null,
+    statusByUser,
+    removed: false,
+    createdAt: nowISO()
+  };
+  db.campaignSessions.push(session);
+  saveDB(db);
+  return session;
+}
+
+function setCampaignSessionStatus(sessionId, userId, status) {
+  const db = loadDB();
+  const s = db.campaignSessions.find((sess) => sess.id === sessionId);
+  if (!s || s.removed) return { ok: false };
+  if (!["pending", "confirmed", "unavailable"].includes(status)) return { ok: false };
+  s.statusByUser = s.statusByUser || {};
+  s.statusByUser[userId] = status;
+  saveDB(db);
+  return { ok: true };
+}
+
+function removeCampaignSession(sessionId, actorUserId) {
+  const db = loadDB();
+  const s = db.campaignSessions.find((sess) => sess.id === sessionId);
+  if (!s || s.removed) return { ok: false };
+  if (s.creatorId !== actorUserId) return { ok: false };
+  s.removed = true;
+  saveDB(db);
+  return { ok: true };
 }

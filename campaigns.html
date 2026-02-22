@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campaigns</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/campaigns.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Campaigns</h1>
+      <p class="muted">Manage D&D campaigns, members, roles, and session defaults.</p>
+      <div class="row">
+        <div>
+          <label for="joinCampaignCode">Join Code</label>
+          <div class="inline">
+            <input id="joinCampaignCode" placeholder="Enter code" />
+            <button id="joinCampaignBtn" type="button">Join Campaign</button>
+          </div>
+        </div>
+        <div>
+          <label for="newCampaignName">Campaign Name</label>
+          <div class="inline">
+            <input id="newCampaignName" placeholder="Create campaign" />
+            <button id="createCampaignBtn" type="button">Create Campaign</button>
+          </div>
+        </div>
+      </div>
+      <div id="campaignsList" class="list" style="margin-top:14px;"></div>
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+</body>
+</html>
