@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/account.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Account</h1>
+      <form id="accountForm" class="list">
+        <div class="row">
+          <div>
+            <label for="username">Username</label>
+            <input id="username" required />
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input id="email" type="email" required />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="photoUpload">Profile Photo</label>
+            <input id="photoUpload" type="file" accept="image/*" />
+            <div class="inline" style="margin-top:8px;">
+              <button id="removePhotoBtn" type="button" class="secondary">Remove Photo</button>
+              <button id="openPublicProfileBtn" type="button" class="secondary">Open Public Profile</button>
+            </div>
+          </div>
+          <div>
+            <label>Photo Preview</label>
+            <div class="avatar-preview-wrap">
+              <img id="photoPreview" class="avatar-preview" alt="Profile preview" />
+            </div>
+          </div>
+        </div>
+        <div>
+          <label for="homeAddress">Home Address (Verified)</label>
+          <input id="homeAddress" placeholder="Street, City, State" />
+        </div>
+        <div>
+          <label for="mobilePhone">Mobile Phone</label>
+          <input id="mobilePhone" placeholder="(555) 555-5555" />
+        </div>
+        <div class="row">
+          <div>
+            <label for="newPassword">New Password (optional)</label>
+            <input id="newPassword" type="password" />
+          </div>
+          <div>
+            <label for="currentPassword">Current Password (required for all changes)</label>
+            <input id="currentPassword" type="password" required />
+          </div>
+        </div>
+        <div>
+          <label>Bands You Are In (toggle public visibility)</label>
+          <div id="myBands" class="list"></div>
+        </div>
+        <button type="submit">Save Account Changes</button>
+      </form>
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+</body>
+</html>

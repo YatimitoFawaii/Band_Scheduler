@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gigs</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/gigs.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Gigs</h1>
+      <form id="gigForm" class="list">
+        <div class="row">
+          <div>
+            <label for="bandId">Band</label>
+            <select id="bandId" required></select>
+          </div>
+          <div>
+            <label for="venue">Venue (name)</label>
+            <input id="venue" required />
+          </div>
+        </div>
+        <div>
+          <label for="address">Address (Verified)</label>
+          <input id="address" required />
+        </div>
+        <div class="row">
+          <div>
+            <label for="callTime">Call Time</label>
+            <input id="callTime" type="datetime-local" required />
+          </div>
+          <div>
+            <label for="setDuration">Set Duration (minutes)</label>
+            <input id="setDuration" type="number" min="15" step="15" value="60" required />
+          </div>
+          <div>
+            <label for="endTime">End Time</label>
+            <input id="endTime" type="datetime-local" required />
+          </div>
+        </div>
+        <div>
+          <label for="compensation">Band Compensation</label>
+          <input id="compensation" placeholder="$500" required />
+        </div>
+        <button type="submit">Submit</button>
+      </form>
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+</body>
+</html>

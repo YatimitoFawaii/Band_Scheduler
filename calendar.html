@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calendar</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/calendar.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Calendar</h1>
+      <div class="row" style="margin-bottom:10px;">
+        <div>
+          <label for="bandSelect">Band for New Proposals</label>
+          <select id="bandSelect"></select>
+        </div>
+        <div>
+          <label for="rehearsalLocation">Rehearsal Location</label>
+          <select id="rehearsalLocation"></select>
+        </div>
+        <div>
+          <label><input type="checkbox" id="rehearsalRecurring" /> Recurring weekly</label>
+          <select id="rehearsalRecurringCount" disabled>
+            <option value="2">2 weeks total</option>
+            <option value="3">3 weeks total</option>
+            <option value="4" selected>4 weeks total</option>
+            <option value="6">6 weeks total</option>
+            <option value="8">8 weeks total</option>
+            <option value="12">12 weeks total</option>
+          </select>
+        </div>
+        <div class="inline" style="align-items:flex-end;">
+          <button id="prevWeek" type="button" class="secondary">Previous Week</button>
+          <button id="nextWeek" type="button" class="secondary">Next Week</button>
+          <span id="weekLabel" class="badge"></span>
+        </div>
+      </div>
+      <div class="inline" style="margin-bottom:10px;flex-wrap:wrap;">
+        <button id="exportWeekIcs" type="button" class="secondary">Export Week (.ics)</button>
+        <button id="exportUpcomingIcs" type="button" class="secondary">Export Upcoming 90 Days (.ics)</button>
+        <button id="exportSelectedGoogle" type="button" class="secondary">Open Selected Event in Google Calendar</button>
+      </div>
+      <p class="muted">Band selection only affects new proposals and common-slot suggestions. The calendar view shows all your gigs and rehearsals across all bands.</p>
+      <div class="week-shell" id="weekShell"></div>
+      <h3>Next Common Rehearsal Slots</h3>
+      <div id="commonSlots" class="list"></div>
+      <div id="eventActions" class="list"></div>
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+</body>
+</html>

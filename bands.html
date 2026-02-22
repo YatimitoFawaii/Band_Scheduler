@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bands</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/bands.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Bands</h1>
+      <p class="muted">Manage members, roles, rehearsal durations, and your public band page (EPK).</p>
+      <div class="row">
+        <div>
+          <label for="joinCode">Join Code</label>
+          <div class="inline">
+            <input id="joinCode" placeholder="Enter code" />
+            <button id="joinBandBtn" type="button">Join Band</button>
+          </div>
+        </div>
+        <div>
+          <label for="newBandName">Band Name</label>
+          <div class="inline">
+            <input id="newBandName" placeholder="Create band" />
+            <button id="createBandBtn" type="button">Create New Band</button>
+          </div>
+        </div>
+      </div>
+      <div id="bandsList" class="list" style="margin-top:14px;"></div>
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+</body>
+</html>

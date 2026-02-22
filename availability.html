@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Availability</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+  <script defer src="assets/js/app.js"></script>
+  <script defer src="assets/js/availability.js"></script>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Availability</h1>
+      <div class="inline" style="margin-bottom:10px;">
+        <button id="prevWeek" type="button" class="secondary">Previous Week</button>
+        <button id="nextWeek" type="button" class="secondary">Next Week</button>
+        <span id="weekLabel" class="badge"></span>
+      </div>
+      <div class="row" style="margin-bottom:10px;">
+        <div>
+          <label for="slotType">Availability Type</label>
+          <select id="slotType">
+            <option value="preferred">Preferred</option>
+            <option value="possible">Possible</option>
+          </select>
+        </div>
+        <div>
+          <label><input type="checkbox" id="slotRecurring" /> Recurring</label>
+        </div>
+        <div class="inline" style="align-items:flex-end;">
+          <button id="deleteSlot" type="button" class="danger">🗑 Delete Slot</button>
+          <button id="endRecurring" type="button" class="secondary">End Recurring</button>
+        </div>
+      </div>
+      <p class="muted">Click to create a 2-hour block. Drag block to move. Drag bottom edge to resize.</p>
+      <div class="week-shell" id="weekShell"></div>
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+</body>
+</html>

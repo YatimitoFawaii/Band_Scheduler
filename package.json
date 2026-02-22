@@ -1,0 +1,14 @@
+{
+  "name": "band-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Band Scheduler with shared backend support",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.3"
+  }
+}
